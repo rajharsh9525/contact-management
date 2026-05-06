@@ -13,25 +13,32 @@ cloudinary.config({
 
 Router.post('/add-contact',authMiddleware,async(req, res) => {
     try{
-        const user=jwt.verify(req.headers.authorization.split(" ")[1], process.env.JWT_SECRET);
-        await jwt.verify(req.headers.authorization.split(" ")[1], process.env.JWT_SECRET);
-        // console.log(user);
-        const {image} = req.files.image;
-        const uploadedImage=await cloudinary.uploader.upload(image.tempFilePath);
-        const { fullName,email,phone,gender }=req.body;
-        const newContact=new Contact({
+        // Remove redundant JWT verification - authMiddleware already handles this
+        let imageUrl = '';
+        let imageId = '';
+
+        // Handle image upload if provided
+        if (req.files && req.files.image) {
+            const {image} = req.files;
+            const uploadedImage = await cloudinary.uploader.upload(image.tempFilePath);
+            imageUrl = uploadedImage.secure_url;
+            imageId = uploadedImage.public_id;
+        }
+
+        const { fullName, email, phone, gender } = req.body;
+        const newContact = new Contact({
             fullName,
             email,
             phone,
             gender,
-            userId:req.user.userId,
-            imageUrl:uploadedImage.secure_url,
-            imageId:uploadedImage.public_id,
+            userId: req.user.userId,
+            imageUrl,
+            imageId,
         });
         await newContact.save();
-            res.status(201).json({
-            message:'contact added successfully',
-            data:newContact,
+        res.status(201).json({
+            message: 'contact added successfully',
+            data: newContact,
         });
     }
     catch(error){
